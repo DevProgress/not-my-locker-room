@@ -3,9 +3,13 @@ $large-breakpoint: 64em;
 $medium-breakpoint: 42em;
 
 // Colors
-$white: #fde7ba; 
+$white: #fed; 
 $brand-primary: #346; 
 $brand-secondary: #c00; 
+
+// Fonts
+$font: "Oswald", sans-serif; 
+$alt-font: "Special Elite", Courier, sans-serif; 
 
 // Headers
 $header-heading-color: $white;
@@ -52,14 +56,15 @@ $hr-border-color: lighten($brand-primary, 20%);
 body {
   padding: 0;
   margin: 0;
-  font-family: "Oswald", sans-serif;
+  font-family: $font ;
   font-size: 16px;
   line-height: 1.5;
   color: $body-text-color;
+  font-weight: 300; 
   background-color: $white; 
 }
 h1, h2, h3 {
-  font-family: "Special Elite", Courier, sans-serif;
+  font-family: $alt-font;
 }
 a {
   color: $body-link-color;
@@ -117,6 +122,7 @@ a {
 .page-header {
   color: $header-heading-color;
   text-align: left;
+  position: relative; 
   background-color: $header-bg-color;
   background: $header-bg-color url(../img/trumplocker_v1.jpg) no-repeat 80% 50% / cover;
   min-height: 50vw; 
@@ -154,7 +160,8 @@ a {
 }
 
 .project-tagline {
-  font-weight: normal;
+  font-weight: 300;
+  font-family: $font;  
   color: $white;
   width: 70%; 
 
@@ -167,9 +174,16 @@ a {
   }
 
   @include small {
-    font-size: 5vw;
-    width: 55%; 
+    font-size: 4.8vw;
+    width: 60%;
   }
+}
+.photo-credit {
+  position: absolute; 
+  bottom: 5px; 
+  right: 5px; 
+  font-size: 10px; 
+  color: rgba(255,255,255,.5);   
 }
 
 .main-content {
