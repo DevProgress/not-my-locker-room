@@ -8,7 +8,8 @@ body {
   font-size: 16px;
   line-height: 1.5;
   color: #111722;
-  background-color: #fde7ba; }
+  font-weight: 300;
+  background-color: #fed; }
 
 h1, h2, h3 {
   font-family: "Special Elite", Courier, sans-serif; }
@@ -54,8 +55,9 @@ a {
         margin-left: 0; } }
 
 .page-header {
-  color: #fde7ba;
+  color: #fed;
   text-align: left;
+  position: relative;
   background-color: #159957;
   background: #159957 url(../img/trumplocker_v1.jpg) no-repeat 80% 50%/cover;
   min-height: 50vw;
@@ -73,7 +75,7 @@ a {
 .project-name {
   margin-top: 0;
   margin-bottom: 0.1rem;
-  color: #fef0d3; }
+  color: #fffbf7; }
   @media screen and (min-width: 64em) {
     .project-name {
       font-size: 6vw; } }
@@ -85,8 +87,9 @@ a {
       font-size: 9vw; } }
 
 .project-tagline {
-  font-weight: normal;
-  color: #fde7ba;
+  font-weight: 300;
+  font-family: "Oswald", sans-serif;
+  color: #fed;
   width: 70%; }
   @media screen and (min-width: 64em) {
     .project-tagline {
@@ -96,8 +99,15 @@ a {
       font-size: 4vw; } }
   @media screen and (max-width: 42em) {
     .project-tagline {
-      font-size: 5vw;
-      width: 55%; } }
+      font-size: 4.8vw;
+      width: 60%; } }
+
+.photo-credit {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5); }
 
 .main-content {
   word-wrap: break-word; }
