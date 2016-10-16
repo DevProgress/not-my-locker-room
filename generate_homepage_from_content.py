@@ -1,11 +1,17 @@
 #!/usr/bin/env python
 
+import csv
 import json
+import os.path
 import requests
+import sys
 import urllib
 
 # TODO: string formatting by dict/key to be cleaner
 DEFAULT_CONTENT_CSV_PATH = './content.csv'
+DEFAULT_PAGE_TEMPLATE_PATH = './index_template.html'
+DEFAULT_OUTFILE_PATH = 'index.html'
+
 CSV_KEY_TYPE = 'type'
 CSV_KEY_URL = 'url'
 CSV_KEY_QUOTE = 'quote'
@@ -27,7 +33,7 @@ INSTAGRAM_HTML_KEY = 'html'
 
 
 def get_twitter_embed_code(url):
-    encoded_url = urllib.urlencode(url)
+    encoded_url = urllib.quote(url)
     query_path = TWITTER_OEMBED_ENDPOINT % encoded_url
     response = requests.get(query_path)
     if response.status_code != 200:
@@ -38,7 +44,7 @@ def get_twitter_embed_code(url):
 
 
 def get_instagram_embed_code(url):
-    query_path = INSTAGRAM_OEMBED_ENDPOINT % encoded_url
+    query_path = INSTAGRAM_OEMBED_ENDPOINT % url
     response = requests.get(query_path)
     if response.status_code != 200:
         # *** wrap this, say 'skipping', give url i tried to hit, format better
@@ -60,12 +66,12 @@ def html_element_from_embedded_content(url, content_type):
         # this case should never get tripped.
         errString = 'Unexpected type %s (not an embedded content type). This should never happen.' % content_type
         raise ValueError(errString)
-    return EMBEDDED_CONTENT_CONTAINER % (content_type, embed_code)
+    return CONTENT_CONTAINER % (content_type, embed_code)
 
 
 def html_element_from_website_content(url, quote):
     website_content = WEBSITE_CONTENT_TEMPLATE % (quote, url)
-    return EMBEDDED_CONTENT_CONTAINER % ('website', website_content)
+    return CONTENT_CONTAINER % ('website', website_content)
 
 
 """Given a dict representing content (a type, a url, and optionally a quote),
@@ -98,34 +104,62 @@ def html_element_from_content(content_dict):
 def content_from_csv(filepath):
     return csv.DictReader(open(filepath))
 
-def main():
-    print "woot"
-
-    if len(sys.argv) < 2:
-        print 'No content filepath provided, using default: %s' % DEFAULT_CONTENT_CSV_PATH
-        content_csv_filepath = DEFAULT_CONTENT_CSV_PATH
-    else:
-        content_csv_filepath = sys.argv[1]
-
-    if not os.path.isfile(content_csv_filepath):
+def validate_filepath(filepath):
+    if not os.path.isfile(filepath):
         print ('ERROR: Filepath provided ("%s") is not a file (may be a '
-               'directory or an invalid path).' % content_csv_filepath)
+               'directory or an invalid path).' % filepath)
         sys.exit(1)
+    return
+
+def main():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent("""\
+        Generate an index.html file for www.notmylockerroom.com that formats the content provided (as a csv) into stuff.
+    """))
+    parser.add_argument('--content_csv', type=str,
+                        help='path to csv containing content (default: ./content.csv)')
+    parser.add_argument('--page_template', type=str,
+                        help='path to page template into which to insert content (default: ./index_template.html)')
+    parser.add_argument('--outfile', type=str,
+                        help='path to write completed file to (default: ./index.html)')
+    args = parser.parse_args()
+
+
+    if args.content_csv:
+        content_csv_filepath = args.content_csv
+    else:
+        print 'No content csv filepath provided, using default: %s' % DEFAULT_CONTENT_CSV_PATH
+        content_csv_filepath = DEFAULT_CONTENT_CSV_PATH
+    validate_filepath(content_csv_filepath)
+
+    if args.page_template:
+        page_template_filepath = args.page_template
+    else:
+        print 'No page template filepath provided, using default: %s' % DEFAULT_PAGE_TEMPLATE_PATH
+        page_template_filepath = DEFAULT_PAGE_TEMPLATE_PATH
+    validate_filepath(page_template_filepath)
+
+    if args.outfile:
+        page_template_filepath = args.outfile
+    else:
+        print 'No outfile filepath provided, using default: %s' % DEFAULT_OUTFILE_PATH
+        outfile_filepath = DEFAULT_OUTFILE_PATH
 
     content = content_from_csv(content_csv_filepath)
     html_elements_to_add = []
-    for content_dict in content:
-        elem = html_element_from_content(content_dict)
+    for row in content:
+        elem = html_element_from_content(row)
         html_elements_to_add.append(elem)
 
     # gonna hardcode the other filepaths (to the rest of the template) for now
-    with open('index_template.html') as infile:
+    with open(page_template_filepath) as infile:
         page_template = infile.read()
 
     generated_page = page_template % '\n\n'.join(html_elements_to_add)
 
-    # and just write it and we're solid
-
+    with open(outfile_filepath, 'w') as outfile:
+        outfile.write(generated_page)
 
 
 if __name__ == '__main__':
