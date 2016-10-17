@@ -1,17 +1,20 @@
 #!/usr/bin/env python
 
+import argparse
 import csv
 import json
 import os.path
 import requests
 import sys
+import textwrap
 import urllib
 
-# TODO: string formatting by dict/key to be cleaner
+# default filepaths
 DEFAULT_CONTENT_CSV_PATH = './content.csv'
 DEFAULT_PAGE_TEMPLATE_PATH = './index_template.html'
 DEFAULT_OUTFILE_PATH = 'index.html'
 
+# CSV keys and accepted values
 CSV_KEY_TYPE = 'type'
 CSV_KEY_URL = 'url'
 CSV_KEY_QUOTE = 'quote'
@@ -32,12 +35,41 @@ INSTAGRAM_OEMBED_ENDPOINT = 'https://api.instagram.com/oembed/?url=%s'
 INSTAGRAM_HTML_KEY = 'html'
 
 
+def parse_command_line_args():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=textwrap.dedent("""\
+        Generate an index.html file for www.notmylockerroom.com that formats the
+        content provided (as a csv) into html (hitting the appropriate API to
+        get embed code where necessary). The template html file should contain a
+        '%s' where content should be inserted.
+
+        Each row of the content csv represents a content element that will be
+        put into the page. Columns should be 'type', 'url', and 'quote'.
+
+        Type: one of 'twitter', 'instagram', or 'website'.
+        Url: the url of the content (if twitter/instagram, a direct link to the
+            tweet/photo)
+        Quote: for 'website' only, the quote to highlight.
+    """))
+    parser.add_argument('--content_csv', type=str,
+                        help='path to csv containing content (default: %s)' % DEFAULT_CONTENT_CSV_PATH)
+    parser.add_argument('--page_template', type=str,
+                        help='path to page template into which to insert content (default: %s)' % DEFAULT_PAGE_TEMPLATE_PATH)
+    parser.add_argument('--outfile', type=str,
+                        help='path to write completed file to (default: %s)' % DEFAULT_OUTFILE_PATH)
+    return parser.parse_args()
+
+
 def get_twitter_embed_code(url):
     encoded_url = urllib.quote(url)
     query_path = TWITTER_OEMBED_ENDPOINT % encoded_url
     response = requests.get(query_path)
     if response.status_code != 200:
-        print 'Request to Twitter oEmbed endpoint for content "%s" failed with status code %d, message %s' % (url, response.status_code, response.content)
+        print ('Request to Twitter oEmbed endpoint for content "%s" failed '
+               'with status code %d, message %s' %
+               (url, response.status_code, response.content))
+
     else:
         result_json = json.loads(response.content)
         return result_json[TWITTER_HTML_KEY]
@@ -56,7 +88,6 @@ def get_instagram_embed_code(url):
 
 
 def html_element_from_embedded_content(url, content_type):
-    # uhhhh i should do this checking in html_elem_from_content so it's all in one place
     if content_type == CONTENT_TYPE_TWITTER:
         embed_code = get_twitter_embed_code(url)
     elif content_type == CONTENT_TYPE_INSTAGRAM:
@@ -64,7 +95,8 @@ def html_element_from_embedded_content(url, content_type):
     else:
         # We should have validated the content type before calling this func, so
         # this case should never get tripped.
-        errString = 'Unexpected type %s (not an embedded content type). This should never happen.' % content_type
+        errString = ('Unexpected type %s (not an embedded content type). This '
+                     'should never happen in this func.)' % content_type)
         raise ValueError(errString)
     return CONTENT_CONTAINER % (content_type, embed_code)
 
@@ -83,7 +115,8 @@ def html_element_from_content(content_dict):
         print 'No content type provided for entry: "%s". Skipping.' % content_dict
         return
     elif content_type not in CONTENT_TYPES:
-        print 'Unrecognized content type ("%s") in entry: "%s". Skipping.' % (content_type, content_dict)
+        print ('Unrecognized content type ("%s") in entry: "%s". Skipping.'
+               % (content_type, content_dict))
         return
     elif content_type in EMBEDDED_CONTENT_TYPES:
         url = content_dict.get(CSV_KEY_URL)
@@ -99,10 +132,10 @@ def html_element_from_content(content_dict):
     return elem
 
 
-"""Given the filepath of a csv containing content, returns a generator that
-   yields each row as a dict."""
+"""Given the filepath of a csv containing content, returns a list of dicts, each
+   dict representing a row."""
 def content_from_csv(filepath):
-    return csv.DictReader(open(filepath))
+    return list(csv.DictReader(open(filepath)))
 
 def validate_filepath(filepath):
     if not os.path.isfile(filepath):
@@ -112,19 +145,7 @@ def validate_filepath(filepath):
     return
 
 def main():
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=textwrap.dedent("""\
-        Generate an index.html file for www.notmylockerroom.com that formats the content provided (as a csv) into stuff.
-    """))
-    parser.add_argument('--content_csv', type=str,
-                        help='path to csv containing content (default: ./content.csv)')
-    parser.add_argument('--page_template', type=str,
-                        help='path to page template into which to insert content (default: ./index_template.html)')
-    parser.add_argument('--outfile', type=str,
-                        help='path to write completed file to (default: ./index.html)')
-    args = parser.parse_args()
-
+    args = parse_command_line_args()
 
     if args.content_csv:
         content_csv_filepath = args.content_csv
@@ -146,20 +167,26 @@ def main():
         print 'No outfile filepath provided, using default: %s' % DEFAULT_OUTFILE_PATH
         outfile_filepath = DEFAULT_OUTFILE_PATH
 
+    print '-'*80
+
     content = content_from_csv(content_csv_filepath)
+    print 'Loaded %d content rows from csv.' % len(content)
     html_elements_to_add = []
-    for row in content:
+    for i, row in enumerate(content):
+        print '\tProcessing content row %d/%d...' % (i+1, len(content))
         elem = html_element_from_content(row)
         html_elements_to_add.append(elem)
 
-    # gonna hardcode the other filepaths (to the rest of the template) for now
     with open(page_template_filepath) as infile:
         page_template = infile.read()
 
-    generated_page = page_template % '\n\n'.join(html_elements_to_add)
+    html_to_insert = '\n\n'.join([elem.replace('%', '%%') for elem in html_elements_to_add])
+    generated_page = page_template % html_to_insert
 
     with open(outfile_filepath, 'w') as outfile:
         outfile.write(generated_page)
+
+    print 'Succesfully wrote generated page to %s' % outfile_filepath
 
 
 if __name__ == '__main__':
