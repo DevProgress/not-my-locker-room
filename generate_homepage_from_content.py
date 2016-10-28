@@ -215,7 +215,7 @@ def main():
 
     # write results to file
     with open(outfile_filepath, 'w') as outfile:
-        outfile.write(generated_page)
+        outfile.write(generated_page.encode('utf-8'))
 
     print 'Succesfully wrote generated page to %s' % outfile_filepath
 
