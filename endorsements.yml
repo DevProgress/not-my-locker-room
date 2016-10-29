@@ -1,0 +1,27 @@
+title: "We're with her"
+tagline: "Across the political spectrum, newspapers are saying:"
+image: "img/hillary.jpg"
+photocredit: "Marc Nozell"
+heading: "Endorsements:"
+social:
+- type: twitter
+  url: https://twitter.com/nytimes/status/780138577132937216
+- type: twitter
+  url: https://twitter.com/TheAtlantic/status/783760939858395136?ref_src=twsrc%5Etfw
+- type: twitter
+  url: https://twitter.com/HoustonChron/status/788022336695865344
+- type: website
+  url: http://www.latimes.com/opinion/editorials/la-ed-hillary-endorsement-20160923-snap-story.html
+  quote: Hillary Clinton is one of the best prepared candidates to seek the presidency in many years.
+- type: twitter
+  url: https://twitter.com/azcentral/status/780937672223256576?ref_src=twsrc%5Etfw
+- type: website
+  url: http://www.baltimoresun.com/news/opinion/editorial/bs-ed-hillary-clinton-endorsement-20160929-story.html
+  quote: ...we have not been guarded at expressing our admiration for Ms.  Clinton's experience, depth of knowledge, steadiness and leadership, nor have we hesitated to point out the utter lack of those qualities in her Republican opponent, Donald Trump.
+- type: twitter
+  url: https://twitter.com/alcombirmingham/status/785098210452922368
+- type: website
+  url: http://www.sandiegouniontribune.com/opinion/the-conversation/sd-hillary-clinton-endorsement-for-president-20160929-story.html
+  quote: This paper has not endorsed a Democrat for president in its 148-year history. But we endorse Clinton. 
+- type: twitter
+  url: https://twitter.com/voguemagazine/status/788412745049837569?ref_src=twsrc%5Etfw

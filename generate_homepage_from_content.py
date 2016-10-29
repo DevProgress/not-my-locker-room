@@ -29,7 +29,8 @@ EMBEDDED_CONTENT_TYPES = [CONTENT_TYPE_TWITTER, CONTENT_TYPE_INSTAGRAM]
 # HTML templates
 CONTENT_CONTAINER = '<div class="content %s">%s</div>'
 WEBSITE_CONTENT_TEMPLATE = ('<span class="website-content">%s</span>\n'
-                            '<span class="website-url">%s</span>')
+                            '<span class="website-url">'
+                            '<a href="%s">%s</a></span><br><br>')
 
 # API endpoints and keys
 TWITTER_OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed?url=%s'
@@ -118,7 +119,7 @@ def html_element_from_embedded_content(url, content_type):
 def html_element_from_website_content(url, quote):
     """Given website content (source url, quote), insert into the
     appropriate HTML template."""
-    website_content = WEBSITE_CONTENT_TEMPLATE % (quote, url)
+    website_content = WEBSITE_CONTENT_TEMPLATE % (quote, url, url)
     return CONTENT_CONTAINER % ('website', website_content)
 
 
@@ -201,7 +202,8 @@ def main():
     html_elements_to_add = []
     for s in content['social']:
       elem = html_element_from_content(s)
-      html_elements_to_add.append(elem)
+      if elem:
+        html_elements_to_add.append(elem)
 
     # insert generated content into page template
     with open(page_template_filepath) as infile:
