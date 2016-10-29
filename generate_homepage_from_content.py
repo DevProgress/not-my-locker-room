@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
 import argparse
-import csv
 import json
 import os.path
 import requests
 import sys
 import textwrap
 import urllib
+import yaml
+
+from string import Template
 
 # default filepaths
-DEFAULT_CONTENT_CSV_PATH = './content.csv'
+DEFAULT_CONTENT_YAML_PATH = './content.yml'
 DEFAULT_PAGE_TEMPLATE_PATH = './index_template.html'
 DEFAULT_OUTFILE_PATH = 'index.html'
 
@@ -41,21 +43,21 @@ def parse_command_line_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""\
         Generate an index.html file for www.notmylockerroom.com that formats
-        the content provided (as a csv) into html (hitting the appropriate
+        the content provided (as yaml) into html (hitting the appropriate
         API to get embed code where necessary). The template html file should
         contain a '%s' where content should be inserted.
 
-        Each row of the content csv represents a content element that will be
-        put into the page. Columns should be 'type', 'url', and 'quote'.
+        Each row of the content represents a content element that will be
+        put into the page.
 
         Type: one of 'twitter', 'instagram', or 'website'.
         Url: the url of the content (if twitter/instagram, a direct link to the
             tweet/photo)
         Quote: for 'website' only, the quote to highlight.
     """))
-    parser.add_argument('--content_csv', type=str,
-                        help=('path to csv containing content (default: %s)' %
-                              DEFAULT_CONTENT_CSV_PATH))
+    parser.add_argument('--content', type=str,
+                        help=('path to yaml file containing content (default: %s)' %
+                              DEFAULT_CONTENT_YAML_PATH))
     parser.add_argument('--page_template', type=str,
                         help=('path to page template into which to insert '
                               'content (default: %s)' %
@@ -147,11 +149,12 @@ def html_element_from_content(content_dict):
     return elem.replace('%', '%%')
 
 
-def content_from_csv(filepath):
-    """Given the filepath of a csv containing content, returns a list of dicts,
-    each dict representing a row."""
-    return list(csv.DictReader(open(filepath)))
-
+def content_from_yaml(filepath):
+    """Given the filepath of a yaml file containing content, returns a dict of
+    content information."""
+    with open(filepath) as stream:
+      contents = yaml.load(stream)
+    return contents
 
 def validate_filepath(filepath):
     """Make sure given filepath is a valid file."""
@@ -166,12 +169,12 @@ def main():
     args = parse_command_line_args()
 
     # set filepaths from command line args or default, validate filepaths.
-    if args.content_csv:
-        content_csv_filepath = args.content_csv
+    if args.content:
+        content_yaml_filepath = args.content
     else:
-        print 'No content csv filepath provided, using default: %s' % DEFAULT_CONTENT_CSV_PATH
-        content_csv_filepath = DEFAULT_CONTENT_CSV_PATH
-    validate_filepath(content_csv_filepath)
+        print 'No content yaml filepath provided, using default: %s' % DEFAULT_CONTENT_YAML_PATH
+        content_yaml_filepath = DEFAULT_CONTENT_YAML_PATH
+    validate_filepath(content_yaml_filepath)
 
     if args.page_template:
         page_template_filepath = args.page_template
@@ -188,25 +191,29 @@ def main():
 
     print '-'*80
 
-    # read in content csv, generate html elements for each piece of content
+    # read in content yaml, generate html elements for each piece of content
     # (getting embed code from API where appropriate.)
-    content = content_from_csv(content_csv_filepath)
-    print 'Loaded %d content rows from csv.' % len(content)
+    content = content_from_yaml(content_yaml_filepath)
+    print 'Loaded %d social media rows from yaml.' % len(content['social'])
     html_elements_to_add = []
-    for i, row in enumerate(content):
-        print '\tProcessing content row %d/%d...' % (i+1, len(content))
-        elem = html_element_from_content(row)
+    for s in content['social']:
+      elem = html_element_from_content(s)
+      if elem:
         html_elements_to_add.append(elem)
 
     # insert generated content into page template
     with open(page_template_filepath) as infile:
         page_template = infile.read()
 
-    generated_page = page_template % '\n\n'.join(html_elements_to_add)
+    formatted = '\n\n'.join(html_elements_to_add)
+
+    content['formattedsocial'] = formatted
+
+    generated_page = Template(page_template).substitute(content)
 
     # write results to file
     with open(outfile_filepath, 'w') as outfile:
-        outfile.write(generated_page)
+        outfile.write(generated_page.encode('utf-8'))
 
     print 'Succesfully wrote generated page to %s' % outfile_filepath
 
