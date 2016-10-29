@@ -154,10 +154,7 @@ def content_from_yaml(filepath):
     """Given the filepath of a yaml file containing content, returns a dict of
     content information."""
     with open(filepath) as stream:
-      try:
-        contents = yaml.load(stream)
-      except yaml.YAMLError as ex:
-        print ex
+      contents = yaml.load(stream)
     return contents
 
 def validate_filepath(filepath):
