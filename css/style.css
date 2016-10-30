@@ -9,13 +9,13 @@ body {
   line-height: 1.5;
   color: #111722;
   font-weight: 300;
-  background-color: #fed; }
+  background-color: #ffeedd; }
 
 h1, h2, h3 {
   font-family: "Special Elite", Courier, sans-serif; }
 
 a {
-  color: #c00;
+  color: #cc0000;
   text-decoration: none; }
   a:hover {
     text-decoration: underline; }
@@ -55,7 +55,7 @@ a {
         margin-left: 0; } }
 
 .page-header {
-  color: #fed;
+  color: #ffeedd;
   text-align: left;
   position: relative;
   background-color: #159957;
@@ -75,7 +75,7 @@ a {
 .project-name {
   margin-top: 0;
   margin-bottom: 0.1rem;
-  color: #fffbf7; }
+  color: #fffbf6; }
   @media screen and (min-width: 64em) {
     .project-name {
       font-size: 6vw; } }
@@ -89,7 +89,7 @@ a {
 .project-tagline {
   font-weight: 300;
   font-family: "Oswald", sans-serif;
-  color: #fed;
+  color: #ffeedd;
   width: 70%; }
   @media screen and (min-width: 64em) {
     .project-tagline {
@@ -138,7 +138,7 @@ a {
     margin-top: 2rem;
     margin-bottom: 1rem;
     font-weight: normal;
-    color: #346; }
+    color: #334466; }
   .main-content p {
     margin-bottom: 1em; }
   .main-content code {
@@ -236,6 +236,18 @@ a {
     margin: 1rem 0;
     background-color: #5571aa;
     border: 0; }
+
+.website {
+  margin: 2rem 0;
+  padding: 2rem 1rem;
+  box-shadow: 5px 5px 5px #888888;
+  background-color: WHITE; }
+
+.website-content {
+  font-size: 2rem; }
+
+.website-url {
+  font-size: 1rem; }
 
 .site-footer {
   padding-top: 2rem;

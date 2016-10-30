@@ -14,7 +14,7 @@ from string import Template
 # default filepaths
 DEFAULT_CONTENT_YAML_PATH = './content.yml'
 DEFAULT_PAGE_TEMPLATE_PATH = './index_template.html'
-DEFAULT_OUTFILE_PATH = 'index.html'
+DEFAULT_OUTFILE_PATH = 'index_generated.html'
 
 # CSV keys and accepted values
 CSV_KEY_TYPE = 'type'
@@ -28,8 +28,8 @@ EMBEDDED_CONTENT_TYPES = [CONTENT_TYPE_TWITTER, CONTENT_TYPE_INSTAGRAM]
 
 # HTML templates
 CONTENT_CONTAINER = '<div class="content %s">%s</div>'
-WEBSITE_CONTENT_TEMPLATE = ('<span class="website-content">%s</span>\n'
-                            '<span class="website-url">%s</span>')
+WEBSITE_CONTENT_TEMPLATE = '<div class="website-content">%(website_text)s</div>\n' \
+                            '<div class="website-url"><a href="%(website_url)s">%(website_url)s</a></div>'
 
 # API endpoints and keys
 TWITTER_OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed?url=%s'
@@ -118,7 +118,7 @@ def html_element_from_embedded_content(url, content_type):
 def html_element_from_website_content(url, quote):
     """Given website content (source url, quote), insert into the
     appropriate HTML template."""
-    website_content = WEBSITE_CONTENT_TEMPLATE % (quote, url)
+    website_content = WEBSITE_CONTENT_TEMPLATE % {"website_text": quote, "website_url": url}
     return CONTENT_CONTAINER % ('website', website_content)
 
 
