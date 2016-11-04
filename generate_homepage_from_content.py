@@ -36,13 +36,13 @@ API_INFOS = {
                             'endpoint': 'https://publish.twitter.com/oembed?url=%s',
                             'response_html_key': 'html',
                             'encode_url': True
-                          },
+    },
     CONTENT_TYPE_INSTAGRAM:  {
-                            'endpoint': 'https://api.instagram.com/oembed/?url=%s',
-                            'response_html_key': 'html',
-                            'encode_url': False
-                             }
-            }
+                               'endpoint': 'https://api.instagram.com/oembed/?url=%s',
+                               'response_html_key': 'html',
+                               'encode_url': False
+    }
+}
 
 TWITTER_OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed?url=%s'
 TWITTER_HTML_KEY = 'html'
@@ -97,6 +97,7 @@ def make_embed_code_getter(endpoint, response_html_key, encode_url):
         result_json = json.loads(response.content)
         return result_json[response_html_key]
     return get_embed_code_from_api
+
 
 def get_twitter_embed_code(url):
     """Given a URL, call twitter api for embed code."""
@@ -173,6 +174,7 @@ def content_from_yaml(filepath):
     with open(filepath) as stream:
         contents = yaml.load(stream)
     return contents
+
 
 def validate_filepath(filepath):
     """Make sure given filepath is a valid file."""
