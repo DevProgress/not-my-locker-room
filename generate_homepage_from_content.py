@@ -16,15 +16,14 @@ DEFAULT_CONTENT_YAML_PATH = './content.yml'
 DEFAULT_PAGE_TEMPLATE_PATH = './index_template.html'
 DEFAULT_OUTFILE_PATH = 'index_generated.html'
 
-# CSV keys and accepted values
-CSV_KEY_TYPE = 'type'
-CSV_KEY_URL = 'url'
-CSV_KEY_QUOTE = 'quote'
+# keys and accepted values
+CONTENT_KEY_SOCIAL = 'social'
+CONTENT_KEY_TYPE = 'type'
+CONTENT_KEY_URL = 'url'
+CONTENT_KEY_QUOTE = 'quote'
 CONTENT_TYPE_TWITTER = 'twitter'
 CONTENT_TYPE_INSTAGRAM = 'instagram'
 CONTENT_TYPE_WEBSITE = 'website'
-CONTENT_TYPES = [CONTENT_TYPE_TWITTER, CONTENT_TYPE_INSTAGRAM, CONTENT_TYPE_WEBSITE]
-EMBEDDED_CONTENT_TYPES = [CONTENT_TYPE_TWITTER, CONTENT_TYPE_INSTAGRAM]
 
 # HTML templates
 CONTENT_CONTAINER = '<div class="content %s">%s</div>'
@@ -32,6 +31,19 @@ WEBSITE_CONTENT_TEMPLATE = '<div class="website-content">%(website_text)s</div>\
                             '<div class="website-url"><a href="%(website_url)s">%(website_url)s</a></div>'
 
 # API endpoints and keys
+API_INFOS = {
+    CONTENT_TYPE_TWITTER: {
+                            'endpoint': 'https://publish.twitter.com/oembed?url=%s',
+                            'response_html_key': 'html',
+                            'encode_url': True
+    },
+    CONTENT_TYPE_INSTAGRAM:  {
+                               'endpoint': 'https://api.instagram.com/oembed/?url=%s',
+                               'response_html_key': 'html',
+                               'encode_url': False
+    }
+}
+
 TWITTER_OEMBED_ENDPOINT = 'https://publish.twitter.com/oembed?url=%s'
 TWITTER_HTML_KEY = 'html'
 INSTAGRAM_OEMBED_ENDPOINT = 'https://api.instagram.com/oembed/?url=%s'
@@ -68,6 +80,25 @@ def parse_command_line_args():
     return parser.parse_args()
 
 
+def make_embed_code_getter(endpoint, response_html_key, encode_url):
+    def get_embed_code_from_api(url):
+        if encode_url:
+            query_path = endpoint % urllib.quote(url)
+        else:
+            query_path = endpoint % url
+
+        response = requests.get(query_path)
+        if response.status_code != 200:
+            print ('Request to oEmbed endpoint "%s" failed with '
+                   'status code %d, message %s' %
+                   (query_path, response.status_code, response.content))
+            return
+
+        result_json = json.loads(response.content)
+        return result_json[response_html_key]
+    return get_embed_code_from_api
+
+
 def get_twitter_embed_code(url):
     """Given a URL, call twitter api for embed code."""
     # Twitter API expects url-encoded url
@@ -78,6 +109,7 @@ def get_twitter_embed_code(url):
         print ('Request to Twitter oEmbed endpoint for content "%s" failed '
                'with status code %d, message %s' %
                (url, response.status_code, response.content))
+        return
 
     else:
         result_json = json.loads(response.content)
@@ -98,23 +130,6 @@ def get_instagram_embed_code(url):
         return result_json[INSTAGRAM_HTML_KEY]
 
 
-def html_element_from_embedded_content(url, content_type):
-    """Given embeddable content (a source url for twitter or instagram), call
-    the appropriate API to get embed code and insert into the appropriate HTML
-    wrapper."""
-    if content_type == CONTENT_TYPE_TWITTER:
-        embed_code = get_twitter_embed_code(url)
-    elif content_type == CONTENT_TYPE_INSTAGRAM:
-        embed_code = get_instagram_embed_code(url)
-    else:
-        # We should have validated the content type before calling this func,
-        # so this case should never get tripped.
-        errString = ('Unexpected type %s (not an embedded content type). This '
-                     'should never happen in this func.)' % content_type)
-        raise ValueError(errString)
-    return CONTENT_CONTAINER % (content_type, embed_code)
-
-
 def html_element_from_website_content(url, quote):
     """Given website content (source url, quote), insert into the
     appropriate HTML template."""
@@ -122,28 +137,32 @@ def html_element_from_website_content(url, quote):
     return CONTENT_CONTAINER % ('website', website_content)
 
 
-def html_element_from_content(content_dict):
+def html_element_from_content(content_dict, embed_code_getters):
     """Given a dict representing content (a type, a url, and optionally a
     quote), returns the content wrapped in the appropriate HTML element
     (ready for insertion on the homepage)."""
-    content_type = content_dict.get(CSV_KEY_TYPE)
+    content_type = content_dict.get(CONTENT_KEY_TYPE)
     if not content_type:
         print 'No content type provided for entry: "%s". Skipping.' % content_dict
         return
-    elif content_type not in CONTENT_TYPES:
-        print ('Unrecognized content type ("%s") in entry: "%s". Skipping.'
-               % (content_type, content_dict))
-        return
-    elif content_type in EMBEDDED_CONTENT_TYPES:
-        url = content_dict.get(CSV_KEY_URL)
+    elif content_type == CONTENT_TYPE_WEBSITE:
+        url = content_dict.get(CONTENT_KEY_URL)
+        quote = content_dict.get(CONTENT_KEY_QUOTE)
+        elem = html_element_from_website_content(url, quote)
+    elif content_type in API_INFOS.keys():
+        url = content_dict.get(CONTENT_KEY_URL)
         if not url:
             print 'No url provided for entry: "%s". Skipping.' % content_dict
             return
-        elem = html_element_from_embedded_content(url, content_type)
-    elif content_type == CONTENT_TYPE_WEBSITE:
-        url = content_dict.get(CSV_KEY_URL)
-        quote = content_dict.get(CSV_KEY_QUOTE)
-        elem = html_element_from_website_content(url, quote)
+        embed_code_getter_func = embed_code_getters.get(content_type)
+        if not embed_code_getter_func:
+            print 'No api info provided for content type "%s", skipping.' % content_type
+            return
+        elem = embed_code_getter_func(url)
+    else:
+        print ('Unrecognized content type ("%s") in entry: "%s". Skipping.'
+               % (content_type, content_dict))
+        return
 
     # make sure to escape any lone '%' signs
     return elem.replace('%', '%%')
@@ -153,8 +172,9 @@ def content_from_yaml(filepath):
     """Given the filepath of a yaml file containing content, returns a dict of
     content information."""
     with open(filepath) as stream:
-      contents = yaml.load(stream)
+        contents = yaml.load(stream)
     return contents
+
 
 def validate_filepath(filepath):
     """Make sure given filepath is a valid file."""
@@ -166,7 +186,12 @@ def validate_filepath(filepath):
 
 
 def main():
+    # setup
     args = parse_command_line_args()
+    embed_code_getters = {}
+    for content_type, info in API_INFOS.iteritems():
+        embed_code_getter = make_embed_code_getter(info['endpoint'], info['response_html_key'], info['encode_url'])
+        embed_code_getters[content_type] = embed_code_getter
 
     # set filepaths from command line args or default, validate filepaths.
     if args.content:
@@ -194,21 +219,22 @@ def main():
     # read in content yaml, generate html elements for each piece of content
     # (getting embed code from API where appropriate.)
     content = content_from_yaml(content_yaml_filepath)
-    print 'Loaded %d social media rows from yaml.' % len(content['social'])
+    num_rows = len(content[CONTENT_KEY_SOCIAL])
+    print 'Loaded %d social media rows from yaml.' % num_rows
     html_elements_to_add = []
-    for s in content['social']:
-      elem = html_element_from_content(s)
-      if elem:
-        html_elements_to_add.append(elem)
+
+    for i, row in enumerate(content[CONTENT_KEY_SOCIAL]):
+        print '\tProcessing social media row %d/%d...' % (i+1, num_rows)
+        elem = html_element_from_content(row, embed_code_getters)
+        if elem:
+            html_elements_to_add.append(elem)
 
     # insert generated content into page template
     with open(page_template_filepath) as infile:
         page_template = infile.read()
 
     formatted = '\n\n'.join(html_elements_to_add)
-
     content['formattedsocial'] = formatted
-
     generated_page = Template(page_template).substitute(content)
 
     # write results to file
